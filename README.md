@@ -1,5 +1,27 @@
-# Human-AI Co-Creativity
-This repository contains all code for my research project on Human-AI co-creativity. This project was conducted as part of my master thesis in Cognitive Science at Aarhus University, Spring 2023.
+<div id="top"></div>
+<div align="center">
+    <img src="logo1_resized.jpg" alt="Logo" width="120" height="120">
+<h2 align="center">AI & Creative Writing</h3>
+  <p align="center">
+    <em> Master's Thesis - MSc Cognitive Science at Aarhus University - Spring 2023 </em>
+  <br />
+  <a href="https://github.com/idabh"><strong>Ida Bang Hansen</strong></a>
+  <br />
+  </p>
+</div>
+
+### About The Project
+
+This repository contains the code for my research project on using AI in Creative Writing and Human-AI Co-creativity. This project was conducted as part of my master thesis in Cognitive Science at Aarhus University, Spring 2023.
 
 
-Contact: idabanghansen@gmail.com
+### Abstract
+ABSTRACT
+
+
+
+### Acknowledgments
+* Header illustration created with Bing Image Creator
+
+### Contact
+idabanghansen@gmail.com
