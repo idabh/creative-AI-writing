@@ -1,0 +1,33 @@
+---
+title: "analysis"
+output: html_document
+date: "2023-04-03"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Libraries & load data
+```{r}
+library(tidyverse)
+d <- read.csv('data_pilot_test.csv', sep=";")
+```
+
+# Rename data
+```{r}
+
+
+```
+
+# Add columns (descriptive)
+```{r}
+#texts: nr_words etc... sentiment?
+```
+
+
+# Divergent Semantic Integration (DSI)
+```{r}
+
+```
+
