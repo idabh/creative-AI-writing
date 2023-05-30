@@ -1,33 +1,1634 @@
 ---
-title: "analysis"
+title: "Master thesis - Analysis & Visualisations - Ida Bang Hansen, Spring 2023"
 output: html_document
 date: "2023-04-03"
 ---
+
+This contains all code used for analysis and data visualisation in the master thesis on human co-creative writing.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Libraries & load data
+# Libraries & load + rename + merge data into one dataframe
 ```{r}
-library(tidyverse)
-d <- read.csv('data_pilot_test.csv', sep=";")
+library(tidyverse) ; library(lubridate) ; library(formattable) ; library(gghighlight) ; library(scales) ; library(wesanderson)
+
+# colours for plotting the 7 participants
+participant_colors = c("#BC4749", "#009E74", "#FFC846" , "#0041AA", "#00A9FF", "#874BF8","#FF60A0")
+
+# load study survey data
+survey <- read.csv('data_study_survey.csv')
+
+# rename columns
+survey_renamed <- survey %>% 
+  dplyr::rename(time = Tidsstempel,
+    id = Participant.ID..filled.out.by.researcher.,
+    age_start_learning_eng = At.what.age.did.you.start.learning.English...put..0..if.native.,
+    years_experience_creative_writing =
+      Please.state.for.how.many.years.of.your.life..approximately..you.have.been.engaged.in.the.domain.of.literature.creative.writing.,
+    
+    #ICAA items
+    ICAA_CAct1_wrote_short_work =
+      Please.indicate.how.often.you.have.carried.out.each.activity.over.the.past.10.years...Wrote.a.short.literary.work..e.g..poem..short.story..,
+    ICAA_CAct2_wrote_long_work =
+      Please.indicate.how.often.you.have.carried.out.each.activity.over.the.past.10.years...Wrote.a.long.literary.work..e.g..book..theatre.play..,
+    ICAA_CAct3_wrote_article =
+      Please.indicate.how.often.you.have.carried.out.each.activity.over.the.past.10.years...Wrote.a.newspaper.article.editorials.,
+    ICAA_CAct4_created_talk =
+      Please.indicate.how.often.you.have.carried.out.each.activity.over.the.past.10.years...Created.an.original.talk.,
+    ICAA_CAct5_made_up_joke =
+      Please.indicate.how.often.you.have.carried.out.each.activity.over.the.past.10.years...Made.up.a.joke.,
+    ICAA_CAct6_wrote_blog =
+      Please.indicate.how.often.you.have.carried.out.each.activity.over.the.past.10.years...Wrote.a.blog.entry.,
+    
+    ICAA_CAch =
+      Please.mark.all.levels.of.achievement.that.you.have.attained.in.the.domain.of.literature.creative.writing.,
+    
+    #Cognitive load items
+    cog_discouraged_annoyed_ai =
+      Please.rate.the.cognitive.load.of.the.task...How.discouraged.or.annoyed.were.you.during.the.writing.with.the.AI..,
+    cog_work_hard_ai =
+      Please.rate.the.cognitive.load.of.the.task...How.hard.did.you.have.to.work.to.do.the.writing.with.the.AI..,
+    cog_hurried_rushed_ai =
+      Please.rate.the.cognitive.load.of.the.task...How.hurried.or.rushed.did.you.feel.while.writing.with.the.AI..,
+    cog_mentally_demanding_ai =
+      Please.rate.the.cognitive.load.of.the.task...How.mentally.demanding.was.the.task.of.writing.with.the.AI..,
+    cog_discouraged_annoyed_own =
+      Please.rate.the.cognitive.load.of.the.task.from..Very.low..to..Very.high....How.discouraged.or.annoyed.were.you.during.the.writing.on.your.own..,
+    cog_work_hard_own =
+      Please.rate.the.cognitive.load.of.the.task.from..Very.low..to..Very.high....How.hard.did.you.have.to.work.to.do.the.writing.on.your.own..,
+    cog_hurried_rushed_own =
+      Please.rate.the.cognitive.load.of.the.task.from..Very.low..to..Very.high....How.hurried.or.rushed.did.you.feel.while.writing.on.your.own..,
+    cog_mentally_demanding_own =
+      Please.rate.the.cognitive.load.of.the.task.from..Very.low..to..Very.high....How.mentally.demanding.was.the.task.of.writing.on.your.own..,
+    #self-ratings of stories
+    story_was_coherent_own =
+      Please.rate.the.following.in.regard.to.the.story.you.just.wrote...The.story.that.I.wrote.is.coherent.,
+    story_was_coherent_ai =
+Please.rate.the.following.in.regard.to.the.story.you.just.wrote...The.story.that.I.wrote.is.coherent..1,
+story_was_creative_own =
+Please.rate.the.following.in.regard.to.the.story.you.just.wrote...The.story.that.I.wrote.is.creative.,
+story_was_creative_ai =
+Please.rate.the.following.in.regard.to.the.story.you.just.wrote...The.story.that.I.wrote.is.creative..1,
+story_was_high_quality_own =
+  Please.rate.the.following.in.regard.to.the.story.you.just.wrote...The.story.that.I.wrote.is.of.high.quality.,
+story_was_high_quality_ai =
+  Please.rate.the.following.in.regard.to.the.story.you.just.wrote...The.story.that.I.wrote.is.of.high.quality..1,
+easy_coming_up_with_ideas_own =
+  Please.rate.the.following.in.regard.to.the.story.you.just.wrote...It.was.easy.to.come.up.with.ideas.while.writing.,
+easy_coming_up_with_ideas_ai =
+  Please.rate.the.following.in.regard.to.the.story.you.just.wrote...It.was.easy.to.come.up.with.ideas.while.writing..1,
+easy_deciding_how_to_continue_own =
+  Please.rate.the.following.in.regard.to.the.story.you.just.wrote...It.was.easy.to.decide.how.I.wanted.to.continue.my.story.,
+easy_deciding_how_to_continue_ai =
+  Please.rate.the.following.in.regard.to.the.story.you.just.wrote...It.was.easy.to.decide.how.I.wanted.to.continue.my.story..1,
+    #AI user experience
+using_AI_was_intuitive =
+Please.rate.the.following.in.regard.to.your.experience.using.the.AI.writing.tool...Using.the.AI.tool.was.intuitive.,
+using_AI_was_easy = Please.rate.the.following.in.regard.to.your.experience.using.the.AI.writing.tool...Using.the.AI.tool.was.easy.,
+using_AI_was_fun =
+  Please.rate.the.following.in.regard.to.your.experience.using.the.AI.writing.tool...Using.the.AI.tool.was.fun.,
+using_AI_I_quickly_figured_out_how_to_use =
+  Please.rate.the.following.in.regard.to.your.experience.using.the.AI.writing.tool...I.quickly.figured.out.how.to.use.the.AI.tool.,
+using_AI_I_felt_out_of_control =
+  Please.rate.the.following.in.regard.to.your.experience.using.the.AI.writing.tool...I.felt.out.of.control.when.using.the.AI.tool.,
+using_AI_able_to_increase_my_performance =
+  Please.rate.the.following.in.regard.to.your.experience.using.the.AI.writing.tool...The.AI.tool.is.able.to.increase.my.performance.,
+using_AI_the_tool_is_useful =
+  Please.rate.the.following.in.regard.to.your.experience.using.the.AI.writing.tool...The.AI.tool.is.useful.,
+using_AI_I_can_trust_the_tool =
+  Please.rate.the.following.in.regard.to.your.experience.using.the.AI.writing.tool...I.can.trust.the.AI.tool.,
+# evaluation of AI text suggestions
+suggestions_creative =
+  Please.rate.the.following.statements.regarding.the.AI.text.suggestions...The.AI.suggestions.were.creative.,
+suggestions_coherent =
+  Please.rate.the.following.statements.regarding.the.AI.text.suggestions...The.AI.suggestions.were.coherent.,
+suggestions_surprising =
+  Please.rate.the.following.statements.regarding.the.AI.text.suggestions...The.AI.suggestions.were.surprising.,
+suggestions_grammatical =
+  Please.rate.the.following.statements.regarding.the.AI.text.suggestions...The.AI.suggestions.were.grammatically.correct.,
+suggestions_relevant =
+  Please.rate.the.following.statements.regarding.the.AI.text.suggestions...The.AI.suggestions.were.relevant.,
+suggestions_helpful =
+  Please.rate.the.following.statements.regarding.the.AI.text.suggestions...The.AI.suggestions.were.helpful.,
+suggestions_high_quality =
+  Please.rate.the.following.statements.regarding.the.AI.text.suggestions...The.AI.suggestions.were.of.high.quality.,
+suggestions_distracting =
+  Please.rate.the.following.statements.regarding.the.AI.text.suggestions...The.AI.suggestions.distracted.me.from.my.task.,
+#co-creatitivy AI questions
+cocrea_enjoyed_collabing =
+  Please.rate.the.following.statements.regarding.the.AI.text.suggestions...I.enjoyed.collaborating.with.the.AI.,
+cocrea_joint_efforts =
+  Please.rate.the.following.statements.regarding.the.AI.text.suggestions...The.final.story.is.a.result.of.joint.efforts.between.the.AI.and.myself.,
+cocrea_I_did_most =
+  Please.rate.the.following.statements.regarding.the.AI.text.suggestions...I.did.most.of.the.creative.writing..using.the.AI.only.for.suggestions.,
+cocrea_sense_of_partnership =
+  Please.rate.the.following.statements.regarding.the.AI.text.suggestions...I.felt.a.sense.of.partnership.with.the.AI.,
+cocrea_distracted =
+ Please.rate.the.following.statements.regarding.the.AI.text.suggestions...The.AI.suggestions.distracted.me.from.my.task.
+    )
+
+# load study csv
+study <- read.csv('data_pilot.csv', sep=";")
+# fix column names
+colnames(study)[1] ="id"
+
+# merge CSVs
+df <- merge(survey_renamed, study, by = "id")
+
+# ADD STORIES TO DATAFRAME
+stories <- read.csv('data_stories.csv')
+stories$X <- NULL # remove extra column
+df$text_ai <- stories$text_ai
+df$text_own <- stories$text_own
+
+# ADD DSI SCORES TO DATAFRAME
+dsi <- read.csv('data_stories_DSI.csv') # load dsi scores (calculated in Python)
+# integrate into main df
+df$DSI_ai <- dsi$DSI[1:nrow(dsi) %% 2 != 0] # select only odd-numbered rows, i.e. all the AI text DSI scores
+df$DSI_own <- dsi$DSI[1:nrow(dsi) %% 2 == 0] # select only even-numbered rows, i.e. all the own text DSI scores
+
+# DSI GRAMMAR CORRECTED
+dsi_corrected <- read.csv('data_stories_DSI_corrected.csv') # load dsi scores (calculated in Python)
+# integrate into main df
+df$DSI_ai_corrected <- dsi_corrected$DSI[1:nrow(dsi_corrected) %% 2 != 0] # select only odd-numbered rows, i.e. all the AI text DSI scores
+df$DSI_own_corrected <- dsi_corrected$DSI[1:nrow(dsi_corrected) %% 2 == 0] # select only even-numbered rows, i.e. all the own text DSI scores
+
+# DSI NO SYMBOLS
+dsi_nosymbols <- read.csv('DSI_output_pandas_nosymbols.csv') # load dsi scores (calculated in Python)
+# integrate into main df
+df$DSI_ai_nosymbols <- dsi_nosymbols$DSI[1:nrow(dsi_nosymbols) %% 2 != 0] # select only odd-numbered rows, i.e. all the AI text DSI scores
+df$DSI_own_nosymbols <- dsi_nosymbols$DSI[1:nrow(dsi_nosymbols) %% 2 == 0] # select only even-numbered rows, i.e. all the own text DSI scores
+
+# FIX TIMESTAMP DATA
+# turn prompt timestamps into seconds
+df$prompt_times_abs_seconds <- lapply(df$prompt_times_absolute, function(x) {
+  x <- strsplit(x, ";")[[1]]
+  x <- gsub('"', '', x)
+  x <- period_to_seconds(ms(x))
+  return(x)
+})
+
+# convert AI session start and end times to seconds
+df$ai_session_start_seconds <- period_to_seconds(ms(df$ai_session_start))
+df$ai_session_end_seconds <- period_to_seconds(ms(df$ai_session_end))
+df$ai_session_REL_end_seconds <- mapply(function(x,y) x - y, df$ai_session_end_seconds, df$ai_session_start_seconds)
+
+# create column with list of prompt times in amount of seconds passed since that participant's AI session start
+df$prompt_times_seconds_since_start <- mapply(function(x,y) x - y, df$prompt_times_abs_seconds, df$ai_session_start_seconds)
 ```
 
-# Rename data
+# load data from online survey
 ```{r}
+online <- read.csv('data_online_survey_16_responses.csv')
+
+# rename columns
+online <- online %>% 
+  dplyr::rename(use_suggs_how = How.have.you.used.AI.text.suggestions...tick.all.that.apply...add.your.own.,
+                #ICAA items
+    ICAA_CAct1_wrote_short_work =
+      Please.indicate.how.often.you.have.carried.out.each.activity.over.the.past.10.years...Wrote.a.short.literary.work..e.g..poem..short.story..,
+    ICAA_CAct2_wrote_long_work =
+      Please.indicate.how.often.you.have.carried.out.each.activity.over.the.past.10.years...Wrote.a.long.literary.work..e.g..book..theatre.play..,
+    ICAA_CAct3_wrote_article =
+      Please.indicate.how.often.you.have.carried.out.each.activity.over.the.past.10.years...Wrote.a.newspaper.article.editorials.,
+    ICAA_CAct4_created_talk =
+      Please.indicate.how.often.you.have.carried.out.each.activity.over.the.past.10.years...Created.an.original.talk.,
+    ICAA_CAct5_made_up_joke =
+      Please.indicate.how.often.you.have.carried.out.each.activity.over.the.past.10.years...Made.up.a.joke.,
+    ICAA_CAct6_wrote_blog =
+      Please.indicate.how.often.you.have.carried.out.each.activity.over.the.past.10.years...Wrote.a.blog.entry.,
+    ICAA_CAch =
+      Please.mark.all.levels.of.achievement.that.you.have.attained.in.the.domain.of.literature.creative.writing..tick.all.that.apply..
+                )
+```
+
+# ICAA (study)
+```{r}
+# calculate ICAA scores for participants
+library(plyr)
+# CAct (activity) scores
+# Answers are given on 5-point Likert-type scale (0  never; 1  1–2 times; 2: 3–5 times; 3:  6 –10 times; 4  more than 10 times).
+# Averaging across the six items yields a domain-specific CAct score
+
+# create mapping from likert answers to points
+likert_to_numerical <- c('Never' = 0, '1-2 times' = 1, '3-5 times' = 2, '6-10 times' = 3, 'More than 10 times' = 4)
+
+# calculate ICAA scores
+ICAA_scores <- df %>%
+  select(starts_with("ICAA_CAct")) %>%
+  rename_all(~paste0(., "_num"))
+
+ICAA_scores[, grep("^ICAA_CAct", names(ICAA_scores))] <- lapply(ICAA_scores[, grep("^ICAA_CAct", names(ICAA_scores))], function(x) {
+  return(revalue(x, likert_to_numerical))
+})
+
+df <- cbind(df, ICAA_scores) # add ICAA CAct scores to main data frame
+
+# sum up to CAct scores and add to df
+CAct_scores <- df %>%
+  select(starts_with("ICAA_CAct")) %>%
+  select(ends_with("_num")) %>%
+  mutate_if(is.character, as.numeric) %>%
+  mutate(ICAA_CAct_score = rowSums(.))
+
+df <- cbind(df, ICAA_CAct_score = CAct_scores$ICAA_CAct_score)
+
+# CAch (achievement) scores
+# Each level of attainment corresponds to an increasing value from 0 to 10 and multiple answers are possible. Summing across all marked levels of attainment yields a domain-specific CAch score (cf. Carson et al., 2005), which potentially ranges from 0 to 55 (all 10 levels above 0 selected).
+
+df$ICAA_CAch_score <- df$ICAA_CAch # make column
+
+# calculate scores  
+df$ICAA_CAch_score <- str_extract_all(df$ICAA_CAch_score, "\\d")
+df$ICAA_CAch_score <- sapply(df$ICAA_CAch_score, function(x) sum(as.numeric(x)))
+
+
+df$ICAA_CAch_score
+df$ICAA_CAct_score
+```
+# ICAA (survey)
+```{r}
+# calculate ICAA scores for survey participants
+library(plyr)
+# CAct (activity) scores
+# Answers are given on 5-point Likert-type scale (0  never; 1  1–2 times; 2: 3–5 times; 3:  6 –10 times; 4  more than 10 times).
+# Averaging across the six items yields a domain-specific CAct score
+
+# create mapping from likert answers to points
+likert_to_numerical <- c('Never' = 0, '1-2 times' = 1, '3-5 times' = 2, '6-10 times' = 3, 'More than 10 times' = 4)
+
+# calculate ICAA scores
+ICAA_scores <- online %>%
+  select(starts_with("ICAA_CAct")) %>%
+  rename_all(~paste0(., "_num"))
+
+ICAA_scores[, grep("^ICAA_CAct", names(ICAA_scores))] <- lapply(ICAA_scores[, grep("^ICAA_CAct", names(ICAA_scores))], function(x) {
+  return(revalue(x, likert_to_numerical))
+})
+
+online <- cbind(online, ICAA_scores) # add ICAA CAct scores to main data frame
+
+# sum up to CAct scores and add to online
+CAct_scores <- online %>%
+  select(starts_with("ICAA_CAct")) %>%
+  select(ends_with("_num")) %>%
+  mutate_if(is.character, as.numeric) %>%
+  mutate(ICAA_CAct_score = rowSums(.))
+
+online <- cbind(online, ICAA_CAct_score = CAct_scores$ICAA_CAct_score)
+
+# CAch (achievement) scores
+# Each level of attainment corresponds to an increasing value from 0 to 10 and multiple answers are possible. Summing across all marked levels of attainment yields a domain-specific CAch score (cf. Carson et al., 2005), which potentially ranges from 0 to 55 (all 10 levels above 0 selected).
+
+online$ICAA_CAch_score <- online$ICAA_CAch # make column
+
+# calculate scores  
+online$ICAA_CAch_score <- str_extract_all(online$ICAA_CAch_score, "\\d")
+online$ICAA_CAch_score <- sapply(online$ICAA_CAch_score, function(x) sum(as.numeric(x)))
+
+online$ICAA_CAch_score
+online$ICAA_CAct_score
+```
+
+# PLOT/VISUALISE some ICAA scores
+```{r}
+icaa_stats_online <- online %>%
+  group_by() %>%
+  summarise(mean_CAch_online = mean(ICAA_CAch_score),
+            sd_CAch_online = sd(ICAA_CAch_score),
+            mean_CAct_online = mean(ICAA_CAct_score),
+            sd_CAct_online = sd(ICAA_CAct_score)
+            )
+
+icaa_stats_df <- df %>%
+  group_by() %>%
+  summarise(mean_CAch_df = mean(ICAA_CAch_score),
+            sd_CAch_df = sd(ICAA_CAch_score),
+            mean_CAct_df = mean(ICAA_CAct_score),
+            sd_CAct_df = sd(ICAA_CAct_score)
+            )
+
+icaa_stats <- cbind(icaa_stats_df, icaa_stats_online)
+
+df$ICAA_CAch_score
+df$ICAA_CAct_score
+online$ICAA_CAch_score
+online$ICAA_CAct_score
+```
+
+#Online survey stats
+```{r}
+stats_online <- online %>%
+  group_by() %>%
+  summarize(mean_age = mean(Age),
+            sd_age = sd(Age)
+            #mean_age_start_learn_eng = mean(age_start_learning_eng),
+            #sd_age_start_learn_eng = sd(age_start_learning_eng),
+            #mean_years_experience_cw = mean(years_experience_creative_writing),
+            #sd_years_experience_cw = sd(years_experience_creative_writing),
+            )
+```
+
+# Nr words
+```{r}
+df$nr_words_ai <- c(384, 266, 324, 204, 340, 408, 782)
+df$nr_words_own <- c(377, 255, 573, 150, 299, 264, 797)
+```
+
+## Cognitive load
+```{r}
+# create mapping from likert answers to points
+cog_likert_to_numerical <- c('Very low' = 0, '.' = 1, '..' = 2, '...' = 3, '....' = 4, '.....' = 5, 'Very high' = 6)
+
+# turn cognitive load ratings into numerical values
+cog <- df %>%
+  select(starts_with("cog_")) %>%
+  rename_all(~paste0(., "_num"))
+
+# apply translation function
+cog[, grep("^cog_", names(cog))] <- lapply(cog[, grep("^cog_", names(cog))], function(x) {
+  return(revalue(x, cog_likert_to_numerical))
+})
+#make numerical
+cog <- as.data.frame(lapply(cog, function(x) as.numeric(as.character(x))))
+
+df <- cbind(df, cog) # add cog scores back to main data frame
+
+# COGNITIVE LOAD INDEX - raw TLX score, simply the mean across the 4 items
+df$cog_load_raw_TLX_score_ai <- rowMeans(df[,c("cog_discouraged_annoyed_ai_num", "cog_hurried_rushed_ai_num","cog_mentally_demanding_ai_num","cog_work_hard_ai_num")])
+
+df$cog_load_raw_TLX_score_own <- rowMeans(df[,c("cog_discouraged_annoyed_own_num", "cog_hurried_rushed_own_num","cog_mentally_demanding_own_num","cog_work_hard_own_num")])
+
+# PLOT COG LOAD DATA!
+cog_plot <- select(df, starts_with('cog_load_raw_TLX'))
+#cog_plot$ID <- df$id
+cog_plot_long <- gather(cog_plot, key = "variable", value = "value")
+cog_plot_long$ID <- as.factor(rep(df$id,2)) # add participant IDs
+cog_plot_long$variable <- as.factor(ifelse(cog_plot_long$variable == 'cog_load_raw_TLX_score_ai',
+                                 'AI writing session',
+                                 'Non-AI writing session'))
+
+# plot
+ggplot(cog_plot_long,aes(x = variable, y = value, fill = variable)) +
+  geom_boxplot(alpha = 0.5) +
+  scale_fill_manual(values = c('#325586ff', '#0d9857ff')) +
+  geom_point(aes(color=ID),size = 2.7) +
+  #geom_text(aes(label=id, color = id), hjust=1.2, size = 3) +
+  geom_line(aes(group=ID, color=ID), size = 1) +
+  scale_color_manual(values = participant_colors) +
+  scale_y_continuous(limits=c(1,6),breaks=seq(1,6,1)) +
+  labs(title = "Raw Unweighted Cognitive Load Average", x = "", y = "Cognitive load (average of 4 TLX items, Very low - Very high)") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  guides(fill=FALSE) # remove legend for 'variable' boxplot colors, only keep legend for ID colors
+
+
+# T TEST - COGNITIVE LOAD
+t.test(cog_plot$cog_load_raw_TLX_score_own, cog_plot$cog_load_raw_TLX_score_ai)
+```
+
+## Descriptive stats - participants 
+```{r}
+# summarize descriptive statistics on study participants
+stats_df <- df %>%
+  group_by() %>%
+  summarize(mean_age = mean(age),
+            sd_age = sd(age),
+            mean_age_start_learn_eng = mean(age_start_learning_eng),
+            sd_age_start_learn_eng = sd(age_start_learning_eng),
+            mean_years_experience_cw = mean(years_experience_creative_writing),
+            sd_years_experience_cw = sd(years_experience_creative_writing),
+            mean_TLX_cog_load_own = mean(cog_load_raw_TLX_score_own),
+            sd_TLX_cog_load_own = sd(cog_load_raw_TLX_score_own),
+            mean_TLX_cog_load_ai = mean(cog_load_raw_TLX_score_ai),
+            sd_TLX_cog_load_ai = sd(cog_load_raw_TLX_score_ai)
+            )
+```
+
+# TEXT ANALYSIS
+## Descriptive statistics (nr of words etc)
+```{r}
+# make into right format
+stories_new <- stories %>%
+  pivot_longer(cols = -id, names_to = "text_type", values_to = "text") %>%
+  mutate(id = paste0(id, "_", text_type)) %>%
+  select(id, text)
+
+colnames(stories_new) <- c("ID", "Story")
+```
+
+# Divergent Semantic Integration (DSI) (calculated in Python)
+```{r}
+# investigate DSI scores - they're all very close together in value
+mean(df$DSI_ai) # 0.8230106
+mean(df$DSI_own) # 0.8234352
+t.test(df$DSI_ai, df$DSI_own) # no significant difference
+
+# plot DSI scores
+plot(df$DSI_ai, df$DSI_own)
+
+# CHECK if different when grammar corrected!:
+mean(df$DSI_ai_corrected) # 0.821398
+mean(df$DSI_own_corrected) # 0.8222916
+t.test(df$DSI_ai_corrected, df$DSI_own_corrected) # no significant difference
+
+round(df$DSI_own - df$DSI_own_corrected, 5) # -0.00005  0.00288  0.00172  0.00173  0.00002  0.00078  0.00092
+round(df$DSI_ai - df$DSI_ai_corrected, 5) # 0.00195 0.00126 0.00087 0.00202 0.00110 0.00365 0.00043
+plot(df$DSI_ai, df$DSI_ai_corrected)
+plot(df$DSI_own, df$DSI_own_corrected)
+# --> basically no difference!!!
+
+# CHECK if different when no symbols!:
+df %>%
+  group_by(id) %>%
+  summarise(DSI_ai, DSI_ai_corrected, DSI_ai_nosymbols, DSI_own, DSI_own_corrected, DSI_own_nosymbols)
+
+# ok... conclusion: go with grammar corrected version!
+# but also no big difference...
+
+# PLOT DSI SCORES
+dsi_plot <- df %>%
+  group_by(id) %>%
+  select(DSI_own_corrected, DSI_ai_corrected)
+
+dsi_plot
+```
+
+# SUGGESTIONS & INTEGRATIVE LEAPS
+
+# Suggestion characterisation (Calderwood criteria)
+```{r}
+suggestions <- read.csv('data_integrative_leaps.csv', sep=';')
+# count occurrences of different types
+suggestion_counts <- apply(suggestions, 2, count)
+
+# MAKE TABLES / PLOTS of suggestion/integration types
+suggestions_plot <- select(suggestions, starts_with('cal')) # columns of interest (Calderwood)
+suggestions_plot[] <- lapply(suggestions_plot, factor) # turn everything into factors
+suggestions_plot <- suggestions_plot %>% pivot_longer(cols = everything())
+
+# rename
+suggestions_plot <- suggestions_plot %>% 
+  mutate(criteria = recode(name,
+                cal_coherent_in_context = 'Are suggestions coherent in context?',
+                cal_diverse_suggestions = 'Are suggestions diverse?',
+                cal_includes_action = 'Do suggestions include action?',
+                cal_includes_description = 'Do suggestions include description?',
+                cal_intro_new_elements = 'Do suggestions introduce new elements?',
+                cal_matches_tense = 'Are suggestions grammatical?'
+                ))
+
+# create nr_answers variable for labels
+test <- suggestions_plot %>%
+         group_by(criteria, value) %>%
+          dplyr::count(name = "n_answers")
+
+
+# PLOT
+ggplot(suggestions_plot, aes(x = value)) +
+  geom_bar(aes(fill = value), width=0.4) +
+  scale_fill_manual(values = c("#D2222D", "#238823")) +
+  facet_wrap(~criteria) +
+  theme_classic() +
+    labs(
+      title = "Characteristics of AI suggestions (Calderwood criteria)",
+      subtitle = 'Manual coding of 52 AI suggestion pairs from experimental study',
+      x = "",
+      y = "Count") +
+  geom_text(stat = 'count', aes(label = ..count..),
+            position = position_stack(vjust = 0.5),
+            color = "white",
+            fontface = "bold") +
+    theme(
+      plot.title = element_text(hjust = 0.5, face = 'bold', size = 13),
+      plot.subtitle = element_text(hjust = 0.5),
+      axis.text.y = element_text(size=12),
+      axis.text.x = element_text(size=10),
+      strip.text = element_text(size = 12),
+      legend.position = "none"
+    ) +
+  coord_flip()
+```
+
+# Logistic regression (Calderwood categorisation of AI output + participants' choice to integrate AI output)
+```{r}
+# fit the model
+model_log_cal <- glm(integrated ~
+               cal_matches_tense + cal_intro_new_elements + cal_coherent_in_context + cal_includes_description + cal_includes_action + cal_diverse_suggestions,
+             data = cal_cor,
+             family = "binomial")
+
+# print the model summary
+summary(model_log_cal)
+```
+
+## Plot of WHEN they prompted (relative timestamps...)
+```{r}
+df_plot <- df[, c("id", "prompt_times_seconds_since_start", "ai_session_REL_end_seconds")]
+#df_plot$par_line <- paste("c(1,", df$ai_session_REL_end_seconds, ")")
+
+# Convert list column to long format
+df_plot_long <- df_plot %>%
+    unnest(prompt_times_seconds_since_start)
+
+df_plot_long$hor_line <- ifelse(df_plot_long$prompt_times_seconds_since_start %% 2 == 0, 0, 60) # for horizontal line
+df_plot_long$integrated_suggestion <- suggestions$integrated # add whether AI suggestion was used or not
+
+# same, but showing MINUTES since session start
+ggplot(df_plot_long) +
+  #horizontal lines
+    geom_segment(aes(x = hor_line / 60,
+                      y = id,
+                      xend = ai_session_REL_end_seconds / 60,
+                      yend = id,
+                      color = id),
+                 size = 1) +
+  scale_color_manual(values=participant_colors) +
+  #vertical lines
+  geom_point(aes(x = (prompt_times_seconds_since_start + 1) / 60, # +1 adjusts vertical lines to be centered in points
+                   y = id,
+                   color = id), size = 8, shape = 108) +
+  # points (integrated - highlighted with different color)
+  geom_point(data = filter(df_plot_long,df_plot_long$integrated_suggestion == 'yes'), aes(x = prompt_times_seconds_since_start / 60, y = id), color = 'black', size = 2.9) +
+  # points (not integrated)
+  geom_point(data = filter(df_plot_long,df_plot_long$integrated_suggestion == 'no'), aes(x = prompt_times_seconds_since_start / 60, y = id, color = id), size = 2.5) +
+  # theme, labels, etc.
+    theme_classic() +
+    labs(title = "Participants' AI queries during the AI writing session",
+         subtitle = 'Black dot = suggestion was integrated',
+         x = "Minutes since AI session start",
+         y = "Participant ID") +
+    theme(plot.title = element_text(hjust = 0.5, face = 'bold', size = 13),
+          plot.subtitle = element_text(hjust = 0.5),
+          legend.position = "none", panel.grid.major.x=element_line(color="#d3d3d3")) +
+  scale_x_continuous(expand=c(0,0)) # set origin of x axis to 0
+
+```
+
+# Divergent stacked bar chart - AI user experience
+```{r}
+df_AI_user_experience <- df[, grepl("^using", names(df))] #subset columns starting with 'using'
+div_bar_using <- gather(df_AI_user_experience, key = "question", value = "opinion")
+div_bar_using$id <- seq.int(nrow(div_bar_using))
+
+div_bar_using <- div_bar_using %>% 
+  mutate(question = recode(question,
+                using_AI_was_intuitive = 'Using it was intuitive',
+                using_AI_was_easy = 'Using it was easy',
+                using_AI_was_fun = 'Using it was fun',
+                using_AI_the_tool_is_useful = 'It is useful',
+                using_AI_I_quickly_figured_out_how_to_use = 'I quickly figured out how to use it',
+                using_AI_I_felt_out_of_control = 'I felt out of control when using it',
+                using_AI_able_to_increase_my_performance = 'It can increase my performance',
+                using_AI_I_can_trust_the_tool = 'I can trust it'
+                ))
+
+# and now
+df_data_mid <-
+  div_bar_using %>%
+   group_by(question, opinion) %>%
+    dplyr::count(name = "n_answers") %>%
+    group_by(question) %>%
+    mutate(nr_answers = n_answers, perc_answers = n_answers / sum(n_answers)) %>%
+    ungroup() %>%
+    mutate(perc_answers_positive = if_else(opinion %in% c("Somewhat Agree", "Agree", "Strongly Agree"), perc_answers, 0)) %>%
+    group_by(question) %>%
+    mutate(perc_answers_positive = sum(perc_answers_positive)) %>%
+    ungroup() %>%
+    mutate(
+      opinion = fct_relevel(opinion,
+                            "Strongly Disagree", "Somewhat Disagree", "Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"),
+      opinion = fct_rev(opinion),
+      question = fct_reorder(question, perc_answers_positive, .fun = mean)
+    ) %>%
+    select(question, opinion, perc_answers, nr_answers)
+
+# splitting the middle category
+df_data_mid_neg <- df_data_mid %>% 
+  filter(opinion == "Neutral") %>% 
+  mutate(perc_answers = perc_answers / 2,
+         opinion_bis = "Neutral_neg")
+
+df_data_mid_pos <- df_data_mid %>% 
+  filter(opinion == "Neutral") %>% 
+  mutate(perc_answers_bis = perc_answers,
+         perc_answers = perc_answers / 2,
+ # Using Neutral instead of Neutral_pos
+         opinion_bis = "Neutral")
+
+# creating coordinates
+df_data_mid_coord <- df_data_mid %>%
+  filter(opinion != "Neutral") %>%
+  mutate(opinion_bis = opinion) %>%
+  bind_rows(df_data_mid_neg, df_data_mid_pos) %>%
+  mutate(perc_answers = if_else(
+    opinion_bis %in% c("Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral_neg"),
+    -perc_answers,
+    perc_answers
+  ))
+
+df_data_mid_coord$opinion_bis <- fct_relevel(
+  df_data_mid_coord$opinion_bis, 
+  # need to flip the positive side labels since otherwise 
+  # they will be flipped in the graph
+  "Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral_neg"
+  , "Strongly Agree", "Agree", "Somewhat Agree", "Neutral")
+
+
+# fix labels so only one neutral group is labelled
+df_data_mid_coord$nr_answers <- ifelse(df_data_mid_coord$opinion_bis == "Neutral", "", df_data_mid_coord$nr_answers)
+
+# time to PLOT it!
+df_data_mid_coord %>%
+  ggplot(aes(x = question, fill = opinion_bis, y = perc_answers)) +
+  geom_col(width=0.4) +
+  geom_hline(
+    yintercept = 0,
+    size = 1,
+    alpha = 0.7,
+    color = "black"
+  ) +
+  coord_flip() +
+  scale_x_discrete(name = "") +
+  scale_fill_manual(
+    name = "",
+    # we use the same color for Acceptable_neg and Acceptable
+    values = c("Strongly Disagree" = "#b64c23", "Disagree" = "#F57E21", "Somewhat Disagree" = "#FCBB73"
+               , "Neutral_neg" = "#C8D0D9"
+               ,"Neutral" = "#C8D0D9"
+               , "Somewhat Agree"="#A0CBEA", "Agree" = "#5CA1D1", "Strongly Agree"="#0e669f"),
+    guide = guide_legend(label.position = "bottom",
+                         keywidth = 5),
+    # here we ignore Neutral_neg in the legends
+    # so that there is only one Acceptable label
+    breaks = c("Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree")
+  ) +
+  labs(title = "Participants' evaluation of the AI writing tool", subtitle = 'Study (7 participants)') +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_blank(),
+    axis.title.x = element_blank(),
+    axis.text.y = element_text(size = 12),
+    panel.grid = element_blank(),
+    legend.position = "bottom",
+    plot.title = element_text(hjust = 0.5, face = 'bold', size = 13),
+    plot.subtitle = element_text(hjust = 0.5)
+  ) +
+  geom_text(aes(label = nr_answers),
+            position = position_stack(vjust = 0.5),
+            color = "white",
+            fontface = "bold") +
+  guides(fill = guide_legend(nrow = 1, title.hjust = 0.5, label.position = "bottom"))
+
+```
+
+# Divergent stacked bar chart - study AI >< own - ordered comparison patchwork (& all together)
+```{r}
+# prepare data
+df_self_ratings <- df[, grepl("^story|^easy", names(df))] #subset columns starting with 'story' or 'easy'
+div_bar_self_ratings <- gather(df_self_ratings, key = "question", value = "opinion")
+div_bar_self_ratings$id <- seq.int(nrow(div_bar_self_ratings))
+
+div_bar_self_ratings <- div_bar_self_ratings %>% 
+  mutate(question = recode(question,
+                story_was_coherent_own = 'My story is coherent (own)',
+                story_was_creative_own = 'My story is creative (own)',
+                story_was_high_quality_own = 'My story is of high quality (own)',
+                easy_coming_up_with_ideas_own = 'It was easy coming up with ideas while writing (own)',
+                easy_deciding_how_to_continue_own = 'It was easy deciding how to continue my story (own)',
+                story_was_coherent_ai = 'My story is coherent (AI)',
+                story_was_creative_ai = 'My story is creative (AI)',
+                story_was_high_quality_ai = 'My story is of high quality (AI)',
+                easy_coming_up_with_ideas_ai = 'It was easy coming up with ideas while writing (AI)',
+                easy_deciding_how_to_continue_ai = 'It was easy deciding how to continue my story (AI)'
+                ))
+
+# and now
+df_data_mid <-
+  div_bar_self_ratings %>%
+   group_by(question, opinion) %>%
+    dplyr::count(name = "n_answers") %>%
+    group_by(question) %>%
+    mutate(nr_answers = n_answers, perc_answers = n_answers / sum(n_answers)) %>%
+    ungroup() %>%
+    mutate(perc_answers_positive = if_else(opinion %in% c("Somewhat Agree", "Agree", "Strongly Agree"), perc_answers, 0)) %>%
+    group_by(question) %>%
+    mutate(perc_answers_positive = sum(perc_answers_positive)) %>%
+    ungroup() %>%
+    mutate(
+      opinion = fct_relevel(opinion,
+                            "Strongly Disagree", "Somewhat Disagree", "Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"),
+      opinion = fct_rev(opinion),
+      question = fct_reorder(question, perc_answers_positive, .fun = mean)
+    ) %>%
+    select(question, opinion, perc_answers, nr_answers)
+
+# splitting the middle category
+df_data_mid_neg <- df_data_mid %>% 
+  filter(opinion == "Neutral") %>% 
+  mutate(perc_answers = perc_answers / 2,
+         opinion_bis = "Neutral_neg")
+
+df_data_mid_pos <- df_data_mid %>% 
+  filter(opinion == "Neutral") %>% 
+  mutate(perc_answers_bis = perc_answers,
+         perc_answers = perc_answers / 2,
+ # Using Neutral instead of Neutral_pos
+         opinion_bis = "Neutral")
+
+# creating coordinates
+df_data_mid_coord <- df_data_mid %>%
+  filter(opinion != "Neutral") %>%
+  mutate(opinion_bis = opinion) %>%
+  bind_rows(df_data_mid_neg, df_data_mid_pos) %>%
+  mutate(perc_answers = if_else(
+    opinion_bis %in% c("Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral_neg"),
+    -perc_answers,
+    perc_answers
+  ))
+
+df_data_mid_coord$opinion_bis <- fct_relevel(
+  df_data_mid_coord$opinion_bis, 
+  # need to flip the positive side labels since otherwise 
+  # they will be flipped in the graph
+  "Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral_neg"
+  , "Strongly Agree", "Agree", "Somewhat Agree", "Neutral")
+
+# fix labels so only one neutral group is labelled
+df_data_mid_coord$nr_answers <- ifelse(df_data_mid_coord$opinion_bis == "Neutral", "", df_data_mid_coord$nr_answers)
+
+# plotting it ALL!
+df_data_mid_coord %>%
+  ggplot(aes(x = question, fill = opinion_bis, y = perc_answers)) +
+  geom_col(width=0.4) +
+  geom_hline(
+    yintercept = 0,
+    size = 1,
+    alpha = 0.7,
+    color = "black"
+  ) +
+  coord_flip() +
+  scale_x_discrete(name = "") +
+  scale_fill_manual(
+    name = "",
+    # we use the same color for Acceptable_neg and Acceptable
+    values = c("Strongly Disagree" = "#b64c23", "Disagree" = "#F57E21", "Somewhat Disagree" = "#FCBB73"
+               , "Neutral_neg" = "#C8D0D9"
+               ,"Neutral" = "#C8D0D9"
+               , "Somewhat Agree"="#A0CBEA", "Agree" = "#5CA1D1", "Strongly Agree"="#0e669f"),
+    guide = guide_legend(label.position = "bottom",
+                         keywidth = 5),
+    # here we ignore Neutral_neg in the legends
+    # so that there is only one Acceptable label
+    breaks = c("Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree")
+  ) +
+  labs(title = "Participants' self-ratings after each writing session", subtitle = 'Study (7 participants)') +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_blank(),
+    axis.title.x = element_blank(),
+    panel.grid = element_blank(),
+    legend.position = "bottom",
+    plot.title = element_text(hjust = 0.5, face = 'bold', size = 13),
+    plot.subtitle = element_text(hjust = 0.5)
+  ) +
+  geom_text(aes(label = nr_answers),
+            position = position_stack(vjust = 0.5),
+            color = "white",
+            fontface = "bold") +
+  guides(fill = guide_legend(nrow = 1, title.hjust = 0.5, label.position = "bottom"))
+
+
+# LOOP - plotting stuff in pairs to compare between writing sessions!
+for (pattern in c('My story is of high quality', 'My story is creative', 'My story is coherent', 'It was easy deciding how to continue my story', 'It was easy coming up with ideas while writing')) {
+  legend_temp <- ifelse(pattern == 'My story is of high quality', 'bottom', 'none') # only include legend on the first plot
+  temp_subset <- df_data_mid_coord[grepl(pattern, df_data_mid_coord$question), ]
+    plot_name <- paste0("plot_", pattern)
+    
+    assign(plot_name,
+           ggplot(data = temp_subset, aes(x = question, fill = opinion_bis, y = perc_answers)) +
+    geom_col(width=0.4) +
+    geom_hline(
+    yintercept = 0,
+    size = 1,
+    alpha = 0.7,
+    color = "black"
+    ) +
+    coord_flip() +
+    scale_x_discrete(name = "") +
+    scale_fill_manual(
+      drop = FALSE,
+      name = "",
+      # we use the same color for Acceptable_neg and Acceptable
+      values = c("Strongly Disagree" = "#b64c23", "Disagree" = "#F57E21", "Somewhat Disagree" = "#FCBB73"
+               , "Neutral_neg" = "#C8D0D9"
+               ,"Neutral" = "#C8D0D9"
+               , "Somewhat Agree"="#A0CBEA", "Agree" = "#5CA1D1", "Strongly Agree"="#0e669f"),
+      guide = guide_legend(label.position = "bottom",
+                         byrow = TRUE),
+      # here we ignore Neutral_neg in the legends so that there is only one Acceptable label
+      breaks = c("Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree")
+      ) +
+    labs(title = pattern, x="") +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_blank(),
+      axis.title.x = element_blank(),
+      axis.text.y = element_text(size = 11),
+      panel.grid = element_blank(),
+      legend.position = legend_temp,
+      plot.title = element_text(hjust = 0.5, size = 12)
+      ) +
+    geom_text(aes(label = nr_answers),
+            position = position_stack(vjust = 0.5),
+            color = "white",
+            fontface = "bold") +
+      scale_x_discrete(labels = c('With AI', 'Alone'))
+    ) +
+  guides(fill = guide_legend(nrow = 1, title.hjust = 0.5, label.position = "bottom"))
+}
+
+
+# combine the plots into one!
+library(patchwork)
+design <- "
+123
+456
+"    
+`plot_My story is of high quality` + `plot_My story is creative` + `plot_It was easy deciding how to continue my story` + `plot_My story is coherent` + `plot_It was easy coming up with ideas while writing` +
+  #plot_layout(ncol = 3) +
+  plot_annotation(title = "Participants' self-evaluation after each writing session",
+                  subtitle = "Study (7 participants)",
+                  theme = theme(plot.subtitle = element_text(hjust = 0.5), plot.title = element_text(hjust = 0.5, face = 'bold', size = 15))) +
+  guide_area() +
+  plot_layout(design=design, guides = 'collect')
+
+
+# another way to combine plots
+#library(ggpubr)
+#ggarrange(`plot_My story is of high quality`, `plot_My story is creative`, `plot_It was easy deciding how to continue my story`, `plot_My story is coherent`, `plot_It was easy coming up with ideas while writing`,
+#          ncol=3, nrow=2, common.legend = TRUE, legend="bottom")
+
+```
+
+# Divergent stacked bar chart - study evaluation of AI suggestions
+```{r}
+df_suggs_ratings <- df[, grepl("^suggestions_", names(df))] #subset columns starting with 'suggestions_'
+div_bar_suggs <- gather(df_suggs_ratings, key = "question", value = "opinion")
+div_bar_suggs$id <- seq.int(nrow(div_bar_suggs))
+
+div_bar_suggs <- div_bar_suggs %>% 
+  mutate(question = recode(question,
+                           suggestions_creative = 'Creative',
+                           suggestions_coherent = 'Coherent',
+                           suggestions_surprising = 'Surprising',
+                           suggestions_grammatical = 'Grammatically correct',
+                           suggestions_relevant = 'Relevant',
+                           suggestions_helpful = 'Helpful',
+                           suggestions_high_quality = 'High quality',
+                           suggestions_distracting = 'Distracting me from my task'
+                ))
+
+# and now
+df_data_mid <-
+  div_bar_suggs %>%
+   group_by(question, opinion) %>%
+    dplyr::count(name = "n_answers") %>%
+    group_by(question) %>%
+    mutate(nr_answers = n_answers, perc_answers = n_answers / sum(n_answers)) %>%
+    ungroup() %>%
+    mutate(perc_answers_positive = if_else(opinion %in% c("Somewhat Agree", "Agree", "Strongly Agree"), perc_answers, 0)) %>%
+    group_by(question) %>%
+    mutate(perc_answers_positive = sum(perc_answers_positive)) %>%
+    ungroup() %>%
+    mutate(
+      opinion = fct_relevel(opinion,
+                            "Strongly Disagree", "Somewhat Disagree", "Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"),
+      opinion = fct_rev(opinion),
+      question = fct_reorder(question, perc_answers_positive, .fun = mean)
+    ) %>%
+    select(question, opinion, perc_answers, nr_answers)
+
+# splitting the middle category
+df_data_mid_neg <- df_data_mid %>% 
+  filter(opinion == "Neutral") %>% 
+  mutate(perc_answers = perc_answers / 2,
+         opinion_bis = "Neutral_neg")
+
+df_data_mid_pos <- df_data_mid %>% 
+  filter(opinion == "Neutral") %>% 
+  mutate(perc_answers_bis = perc_answers,
+         perc_answers = perc_answers / 2,
+ # Using Neutral instead of Neutral_pos
+         opinion_bis = "Neutral")
+
+# creating coordinates
+df_data_mid_coord <- df_data_mid %>%
+  filter(opinion != "Neutral") %>%
+  mutate(opinion_bis = opinion) %>%
+  bind_rows(df_data_mid_neg, df_data_mid_pos) %>%
+  mutate(perc_answers = if_else(
+    opinion_bis %in% c("Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral_neg"),
+    -perc_answers,
+    perc_answers
+  ))
+
+df_data_mid_coord$opinion_bis <- fct_relevel(
+  df_data_mid_coord$opinion_bis, 
+  # need to flip the positive side labels since otherwise 
+  # they will be flipped in the graph
+  "Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral_neg"
+  , "Strongly Agree", "Agree", "Somewhat Agree", "Neutral")
+
+# fix labels so only one neutral group is labelled
+df_data_mid_coord$nr_answers <- ifelse(df_data_mid_coord$opinion_bis == "Neutral", "", df_data_mid_coord$nr_answers)
+
+# time to PLOT it!
+df_data_mid_coord %>%
+  ggplot(aes(x = question, fill = opinion_bis, y = perc_answers)) +
+  geom_col(width=0.4) +
+  geom_hline(
+    yintercept = 0,
+    size = 1,
+    alpha = 0.7,
+    color = "black"
+  ) +
+  coord_flip() +
+  scale_x_discrete(name = "") +
+  scale_fill_manual(
+    name = "",
+    # we use the same color for Acceptable_neg and Acceptable
+    values = c("Strongly Disagree" = "#b64c23", "Disagree" = "#F57E21", "Somewhat Disagree" = "#FCBB73"
+               , "Neutral_neg" = "#C8D0D9"
+               ,"Neutral" = "#C8D0D9"
+               , "Somewhat Agree"="#A0CBEA", "Agree" = "#5CA1D1", "Strongly Agree"="#0e669f"),
+    guide = guide_legend(label.position = "bottom",
+                         keywidth = 5),
+    # here we ignore Neutral_neg in the legends
+    # so that there is only one Acceptable label
+    breaks = c("Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree")
+  ) +
+  labs(title = "Participants' evaluations of the AI text sugggestions: 'The suggestions were...'", subtitle = "Study (7 participants)") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_blank(),
+    axis.title.x = element_blank(),
+    axis.text.y = element_text(size = 12),
+    panel.grid = element_blank(),
+    legend.position = "bottom",
+    plot.title = element_text(hjust = 0.5, face = 'bold', size = 13),
+    plot.subtitle = element_text(hjust = 0.5)
+  ) +
+  geom_text(aes(label = nr_answers),
+            position = position_stack(vjust = 0.5),
+            color = "white",
+            fontface = "bold") +
+  guides(fill = guide_legend(nrow = 1, title.hjust = 0.5, label.position = "bottom"))
+  
+```
+
+# Divergent stacked bar chart - study evaluations of co-creative aspects
+```{r}
+df_cocrea_ratings <- df[, grepl("^cocrea_", names(df))] #subset columns starting with 'cocrea_'
+div_bar_cocrea <- gather(df_cocrea_ratings, key = "question", value = "opinion")
+div_bar_cocrea$id <- seq.int(nrow(div_bar_cocrea))
+
+div_bar_cocrea <- div_bar_cocrea %>% 
+  mutate(question = recode(question,
+                           cocrea_enjoyed_collabing = 'I enjoyed collaborating with the AI',
+                           cocrea_joint_efforts = 'The final story is a result of joint efforts between the AI and myself',
+                           cocrea_I_did_most = 'I did most of the creative writing, using the AI only for suggestions',
+                           cocrea_sense_of_partnership = 'I felt a sense of partnership with the AI',
+                           cocrea_distracted = 'The AI distracted me from my task'
+                ))
+
+# and now
+df_data_mid <-
+  div_bar_cocrea %>%
+   group_by(question, opinion) %>%
+    dplyr::count(name = "n_answers") %>%
+    group_by(question) %>%
+    mutate(nr_answers = n_answers, perc_answers = n_answers / sum(n_answers)) %>%
+    ungroup() %>%
+    mutate(perc_answers_positive = if_else(opinion %in% c("Somewhat Agree", "Agree", "Strongly Agree"), perc_answers, 0)) %>%
+    group_by(question) %>%
+    mutate(perc_answers_positive = sum(perc_answers_positive)) %>%
+    ungroup() %>%
+    mutate(
+      opinion = fct_relevel(opinion,
+                            "Strongly Disagree", "Somewhat Disagree", "Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"),
+      opinion = fct_rev(opinion),
+      question = fct_reorder(question, perc_answers_positive, .fun = mean)
+    ) %>%
+    select(question, opinion, perc_answers, nr_answers)
+
+# splitting the middle category
+df_data_mid_neg <- df_data_mid %>% 
+  filter(opinion == "Neutral") %>% 
+  mutate(perc_answers = perc_answers / 2,
+         opinion_bis = "Neutral_neg")
+
+df_data_mid_pos <- df_data_mid %>% 
+  filter(opinion == "Neutral") %>% 
+  mutate(perc_answers_bis = perc_answers,
+         perc_answers = perc_answers / 2,
+ # Using Neutral instead of Neutral_pos
+         opinion_bis = "Neutral")
+
+# creating coordinates
+df_data_mid_coord <- df_data_mid %>%
+  filter(opinion != "Neutral") %>%
+  mutate(opinion_bis = opinion) %>%
+  bind_rows(df_data_mid_neg, df_data_mid_pos) %>%
+  mutate(perc_answers = if_else(
+    opinion_bis %in% c("Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral_neg"),
+    -perc_answers,
+    perc_answers
+  ))
+
+df_data_mid_coord$opinion_bis <- fct_relevel(
+  df_data_mid_coord$opinion_bis, 
+  # need to flip the positive side labels since otherwise 
+  # they will be flipped in the graph
+  "Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral_neg"
+  , "Strongly Agree", "Agree", "Somewhat Agree", "Neutral")
+
+# fix labels so only one neutral group is labelled
+df_data_mid_coord$nr_answers <- ifelse(df_data_mid_coord$opinion_bis == "Neutral", "", df_data_mid_coord$nr_answers)
+
+# time to PLOT it!
+df_data_mid_coord %>%
+  ggplot(aes(x = question, fill = opinion_bis, y = perc_answers)) +
+  geom_col(width=0.4) +
+  geom_hline(
+    yintercept = 0,
+    size = 1,
+    alpha = 0.7,
+    color = "black"
+  ) +
+  coord_flip() +
+  scale_x_discrete(name = "") +
+  scale_fill_manual(
+    name = "",
+    # we use the same color for Acceptable_neg and Acceptable
+    values = c("Strongly Disagree" = "#b64c23", "Disagree" = "#F57E21", "Somewhat Disagree" = "#FCBB73"
+               , "Neutral_neg" = "#C8D0D9"
+               ,"Neutral" = "#C8D0D9"
+               , "Somewhat Agree"="#A0CBEA", "Agree" = "#5CA1D1", "Strongly Agree"="#0e669f"),
+    guide = guide_legend(label.position = "bottom",
+                         keywidth = 5),
+    # here we ignore Neutral_neg in the legends
+    # so that there is only one Acceptable label
+    breaks = c("Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree")
+  ) +
+  labs(title = "Participants' evaluation of co-creative aspects of the AI writing session", subtitle = "Study (7 participants)") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_blank(),
+    axis.title.x = element_blank(),
+    axis.text.y = element_text(size = 12),
+    panel.grid = element_blank(),
+    legend.position = "bottom",
+    plot.title = element_text(hjust = 0.5, face = 'bold', size = 15),
+    plot.subtitle = element_text(hjust = 0.5)
+  ) +
+  geom_text(aes(label = nr_answers),
+            position = position_stack(vjust = 0.5),
+            color = "white",
+            fontface = "bold") +
+  guides(fill = guide_legend(nrow = 1, title.hjust = 0.5, label.position = "bottom"))
+```
+
+# Comparison survey - study
+```{r}
+df_compare_ratings <- df[, grepl("^In.which.session|^For.writing.a", names(df))] #subset columns
+div_bar_compare <- gather(df_compare_ratings, key = "question", value = "opinion")
+div_bar_compare$id <- seq.int(nrow(div_bar_compare))
+
+div_bar_compare <- div_bar_compare %>% 
+  mutate(question = recode(question,
+                           In.which.session.was.your.final.text.more.creative. = 'Where was your final text more creative?',
+                           In.which.session.was.your.final.text.more.coherent. = 'Where was your final text more coherent?',
+                           In.which.session.did.you.feel.more.relaxed. = 'Where did you feel more relaxed?',
+                           In.which.session.was.writing.easier. = 'Where was writing easier?',
+                           In.which.session.did.you.feel.more.focused. = 'Where did you feel more focused?',
+                           In.which.session.did.writing.feel.more.demanding. = 'Where did writing feel more demanding?',
+                           In.which.session.did.writing.feel.more.hurried.or.rushed. = 'Where did writing feel more hurried or rushed?',
+                           In.which.session.did.you.feel.you.had.to.work.harder. = 'Where did you feel you had to work harder?',
+                           In.which.session.did.you.feel.more.discouraged.or.annoyed. = 'Where did you feel more discouraged or annoyed?',
+                           For.writing.a.creative.text..which.tool.did.you.prefer. = 'For writing a creative text, what did you prefer?'
+                ))
+
+div_bar_compare$opinion[div_bar_compare$opinion == 1] <- "Alone"
+div_bar_compare$opinion[div_bar_compare$opinion == 9] <- "With AI"
+div_bar_compare$opinion <- as.character(div_bar_compare$opinion)
+
+
+# and now
+df_data_mid <-
+  div_bar_compare %>%
+   group_by(question, opinion) %>%
+    dplyr::count(name = "n_answers") %>%
+    group_by(question) %>%
+    mutate(nr_answers = n_answers, perc_answers = n_answers / sum(n_answers)) %>%
+    ungroup() %>%
+    mutate(perc_answers_positive = if_else(opinion %in% c("6", "7", "8", "With AI"), perc_answers, 0)) %>%
+    group_by(question) %>%
+    mutate(perc_answers_positive = sum(perc_answers_positive)) %>%
+    ungroup() %>%
+    mutate(
+      opinion = fct_relevel(opinion,
+                            "Alone", "2", "3", "4", "5", "6", "7", "8", "With AI"),
+      opinion = fct_rev(opinion),
+      question = fct_reorder(question, perc_answers_positive, .fun = mean)
+    ) %>%
+    select(question, opinion, perc_answers, nr_answers)
+
+# splitting the middle category
+df_data_mid_neg <- df_data_mid %>% 
+  filter(opinion == "5") %>% 
+  mutate(perc_answers = perc_answers / 2,
+         opinion_bis = "Neutral_neg")
+
+df_data_mid_pos <- df_data_mid %>% 
+  filter(opinion == "5") %>% 
+  mutate(perc_answers_bis = perc_answers,
+         perc_answers = perc_answers / 2,
+ # Using Neutral instead of Neutral_pos
+         opinion_bis = "Neutral")
+
+# creating coordinates
+df_data_mid_coord <- df_data_mid %>%
+  filter(opinion != "5") %>%
+  mutate(opinion_bis = opinion) %>%
+  bind_rows(df_data_mid_neg, df_data_mid_pos) %>%
+  mutate(perc_answers = if_else(
+    opinion_bis %in% c("Alone", "2", "3", "4", "Neutral_neg"),
+    -perc_answers,
+    perc_answers
+  ))
+
+df_data_mid_coord$opinion_bis <- fct_relevel(
+  df_data_mid_coord$opinion_bis, 
+  # need to flip the positive side labels since otherwise 
+  # they will be flipped in the graph
+  "Alone", "2", "3", "4", "Neutral_neg"
+  , "With AI", "8", "7", "6", "Neutral")
+
+# fix labels so only one neutral group is labelled
+df_data_mid_coord$nr_answers <- ifelse(df_data_mid_coord$opinion_bis == "Neutral", "", df_data_mid_coord$nr_answers)
+
+# time to PLOT it!
+df_data_mid_coord %>%
+  ggplot(aes(x = question, fill = opinion_bis, y = perc_answers)) +
+  geom_col(width=0.4) +
+  geom_hline(
+    yintercept = 0,
+    size = 1,
+    alpha = 0.7,
+    color = "black"
+  ) +
+  coord_flip() +
+  scale_x_discrete(name = "") +
+  scale_fill_manual(
+    name = "",
+    # we use the same color for Acceptable_neg and Acceptable
+    values = c("Alone" = "#00513d", "2" = "#0d8c75", "3" = "#1bb1a0", "4" = '#2cd1c7'
+               , "Neutral_neg" = "#C8D0D9"
+               ,"Neutral" = "#C8D0D9"
+               , "6"="#73d4ed", "7" = "#00a8d4", "8"="#207db0", "With AI" = '#325586'),
+    guide = guide_legend(label.position = "bottom",
+                         keywidth = 5),
+    # here we ignore Neutral_neg in the legends
+    # so that there is only one Acceptable label
+    breaks = c("Alone", "2", "3", "4", "Neutral", "6", "7", "8", "With AI"),
+    labels = c("Alone", "", "", "", "Neutral", "", "", "", "With AI")
+  ) +
+  labs(title = "Comparison of writing sessions", subtitle = "Study (7 participants)") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_blank(),
+    axis.title.x = element_blank(),
+    axis.text.y = element_text(size=12),
+    panel.grid = element_blank(),
+    legend.position = "bottom",
+    plot.title = element_text(hjust = 0.5, face = 'bold', size = 15),
+    plot.subtitle = element_text(hjust = 0.5)
+  ) +
+  guides(fill = guide_legend(nrow = 1, title.hjust = 0.5, label.position = "bottom")) +
+  geom_text(aes(label = nr_answers),
+            position = position_stack(vjust = 0.5),
+            color = "white",
+            fontface = "bold")
+```
+
+#Online survey - co-creative aspects
+```{r}
+#Please rate the following statements regarding your experience writing with an AI tool. If your AI experience is very varied, please consider the context/use case that you engage in most often.
+online_cocrea_ratings <- online[, grepl("^Please.rate.the.following.statements.regarding.your.experience.writing.with.an.AI.tool..If.your.AI.experience.is.very.varied..please.consider.the.context.use.case.that.you.engage.in.most.often.", names(online))] #subset
+
+div_bar_cocrea <- gather(online_cocrea_ratings, key = "question", value = "opinion")
+div_bar_cocrea$id <- seq.int(nrow(div_bar_cocrea))
+
+div_bar_cocrea <- div_bar_cocrea %>% 
+  mutate(question = recode(question,
+                           Please.rate.the.following.statements.regarding.your.experience.writing.with.an.AI.tool..If.your.AI.experience.is.very.varied..please.consider.the.context.use.case.that.you.engage.in.most.often...I.do.most.of.the.creative.writing..using.the.AI.only.for.suggestions. = 'I do most of the creative writing, using the AI only for suggestions',
+                           Please.rate.the.following.statements.regarding.your.experience.writing.with.an.AI.tool..If.your.AI.experience.is.very.varied..please.consider.the.context.use.case.that.you.engage.in.most.often...I.enjoy.collaborating.with.the.AI. = 'I enjoy collaborating with the AI',
+                           Please.rate.the.following.statements.regarding.your.experience.writing.with.an.AI.tool..If.your.AI.experience.is.very.varied..please.consider.the.context.use.case.that.you.engage.in.most.often...The.AI.tool.distracts.me.from.my.writing.task. = 'The AI tool distracts me from my writing task',
+                           Please.rate.the.following.statements.regarding.your.experience.writing.with.an.AI.tool..If.your.AI.experience.is.very.varied..please.consider.the.context.use.case.that.you.engage.in.most.often...The.final.story.is.a.result.of.joint.efforts.between.the.AI.and.myself. = 'The final story is a result of joint efforts between the AI and myself',
+                           Please.rate.the.following.statements.regarding.your.experience.writing.with.an.AI.tool..If.your.AI.experience.is.very.varied..please.consider.the.context.use.case.that.you.engage.in.most.often...I.feel.a.sense.of.partnership.with.the.AI. = 'I feel a sense of partnership with the AI'
+                ))
+
+# and now
+df_data_mid <-
+  div_bar_cocrea %>%
+   group_by(question, opinion) %>%
+    dplyr::count(name = "n_answers") %>%
+    group_by(question) %>%
+    mutate(nr_answers = n_answers, perc_answers = n_answers / sum(n_answers)) %>%
+    ungroup() %>%
+    mutate(perc_answers_positive = if_else(opinion %in% c("Somewhat Agree", "Agree", "Strongly Agree"), perc_answers, 0)) %>%
+    group_by(question) %>%
+    mutate(perc_answers_positive = sum(perc_answers_positive)) %>%
+    ungroup() %>%
+    mutate(
+      opinion = fct_relevel(opinion,
+                            "Strongly Disagree", "Somewhat Disagree", "Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree"),
+      opinion = fct_rev(opinion),
+      question = fct_reorder(question, perc_answers_positive, .fun = mean)
+    ) %>%
+    select(question, opinion, perc_answers, nr_answers)
+
+# splitting the middle category
+df_data_mid_neg <- df_data_mid %>% 
+  filter(opinion == "Neutral") %>% 
+  mutate(perc_answers = perc_answers / 2,
+         opinion_bis = "Neutral_neg")
+
+df_data_mid_pos <- df_data_mid %>% 
+  filter(opinion == "Neutral") %>% 
+  mutate(perc_answers_bis = perc_answers,
+         perc_answers = perc_answers / 2,
+ # Using Neutral instead of Neutral_pos
+         opinion_bis = "Neutral")
+
+# creating coordinates
+df_data_mid_coord <- df_data_mid %>%
+  filter(opinion != "Neutral") %>%
+  mutate(opinion_bis = opinion) %>%
+  bind_rows(df_data_mid_neg, df_data_mid_pos) %>%
+  mutate(perc_answers = if_else(
+    opinion_bis %in% c("Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral_neg"),
+    -perc_answers,
+    perc_answers
+  ))
+
+df_data_mid_coord$opinion_bis <- fct_relevel(
+  df_data_mid_coord$opinion_bis, 
+  # need to flip the positive side labels since otherwise 
+  # they will be flipped in the graph
+  "Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral_neg"
+  , "Strongly Agree", "Agree", "Somewhat Agree", "Neutral")
+
+# fix labels so only one neutral group is labelled
+df_data_mid_coord$nr_answers <- ifelse(df_data_mid_coord$opinion_bis == "Neutral", "", df_data_mid_coord$nr_answers)
+
+# time to PLOT it!
+df_data_mid_coord %>%
+  ggplot(aes(x = question, fill = opinion_bis, y = perc_answers)) +
+  geom_col(width=0.4) +
+  geom_hline(
+    yintercept = 0,
+    size = 1,
+    alpha = 0.7,
+    color = "black"
+  ) +
+  coord_flip() +
+  scale_x_discrete(name = "") +
+  scale_fill_manual(
+    name = "",
+    # we use the same color for Acceptable_neg and Acceptable
+    values = c("Strongly Disagree" = "#b64c23", "Disagree" = "#F57E21", "Somewhat Disagree" = "#FCBB73"
+               , "Neutral_neg" = "#C8D0D9"
+               ,"Neutral" = "#C8D0D9"
+               , "Somewhat Agree"="#A0CBEA", "Agree" = "#5CA1D1", "Strongly Agree"="#0e669f"),
+    guide = guide_legend(label.position = "bottom",
+                         keywidth = 5),
+    # here we ignore Neutral_neg in the legends
+    # so that there is only one Acceptable label
+    breaks = c("Strongly Disagree", "Disagree", "Somewhat Disagree", "Neutral", "Somewhat Agree", "Agree", "Strongly Agree")
+  ) +
+  labs(title = "Writers' evaluations of their general experiences with AI", subtitle = "Survey (16 participants)") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_blank(),
+    axis.title.x = element_blank(),
+    axis.text.y = element_text(size=12),
+    panel.grid = element_blank(),
+    legend.position = "bottom",
+    plot.title = element_text(hjust = 0.5, face = 'bold', size = 15),
+    plot.subtitle = element_text(hjust = 0.5)
+  ) +
+  geom_text(aes(label = nr_answers),
+            position = position_stack(vjust = 0.5),
+            color = "white",
+            fontface = "bold") +
+  guides(fill = guide_legend(nrow = 1, title.hjust = 0.5, label.position = "bottom"))
+
+```
+
+# Online survey - different writing phases
+```{r}
+#Some people describe their writing process as having different phases. For each of the following phases/aspects of creative writing, please tick all that apply:
+
+# insert data
+claim <- rep(c("This is part of my writing process",
+               "I generally enjoy this part",
+               "I generally do NOT enjoy this part",
+               "I often feel stuck or unmotivated during this part",
+               "I have tried using AI tools for this part",
+               "I often use AI tools for this part",
+               "I prefer doing this part on my own",
+               "I prefer using AI tools for this part") , 4)
+phase <- c(rep("Idea generation" , 8) , rep("Outlining" , 8) , rep("Writing/drafting" , 8) , rep("Evaluation & Editing" , 8))
+value <- c(
+  #idea generation
+  15, 10, 2, 3, 14, 14, 5, 10,
+  #outlining
+  13, 7, 7, 7, 13, 11, 2, 10,
+  #writing/drafting
+  14, 10, 3, 7, 15, 12, 5, 7,
+  #evaluation & editing
+  14, 8, 8, 5, 13, 9, 10, 9
+)
+data <- data.frame(claim, phase, value)
+
+data$phase <- factor(data$phase, levels = c('Idea generation', 'Outlining', 'Writing/drafting', 'Evaluation & Editing'))
+
+# reorder to decide order - but doesn't work
+data$order_by <- ifelse(data$claim == 'This is part of my writing process', 8,
+                     ifelse(data$claim == 'I generally enjoy this part', 7,
+                            ifelse(data$claim == 'I generally do NOT enjoy this part', 6,
+                                   ifelse(data$claim == 'I often feel stuck or unmotivated during this part', 5,
+                                          ifelse(data$claim == 'I have tried using AI tools for this part', 4,
+                                                 ifelse(data$claim == 'I often use AI tools for this part', 3,
+                                                        ifelse(data$claim == 'I prefer using AI tools for this part', 2,
+                                                               ifelse(data$claim == 'I prefer doing this part on my own', 1, NA))))))))
+
+# also doesn't work
+data$claim <- factor(data$claim, levels = c(
+  'This is part of my writing process',
+  'I generally enjoy this part',
+  'I generally do NOT enjoy this part',
+  'I often feel stuck or unmotivated during this part',
+  'I have tried using AI tools for this part',
+  'I often use AI tools for this part',
+  'I prefer doing this part on my own',
+  'I prefer using AI tools for this part'))
+
+# PLOT IT - grouped bar chart
+ggplot(data, aes(fill=phase, y=value, x=str_wrap(claim, width = 15))) + 
+  geom_bar(width = 0.6, position="dodge", stat="identity") +
+  scale_fill_manual(values = c('#8af2a2', '#38bfa7', '#367bc3', '#524582')) +
+  labs(title = 'Different writing phases & AI', subtitle = 'Online survey (16 participants)', x = '', y = 'Response count') +
+  theme_classic() +
+  theme(
+      plot.title = element_text(hjust = 0.5, face = 'bold', size = 13),
+      plot.subtitle = element_text(hjust = 0.5),
+      legend.title = element_blank(),
+      legend.text = element_text(size = 10),
+      axis.text.x = element_text(size=12),
+      panel.grid.major.y = element_line(color='lightgrey')
+    ) +
+  scale_y_continuous(limits=c(0,16), breaks = c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16))
+
+```
+# online - How have you used AI text suggestions?
+```{r}
+# Split the strings by comma and create a new data frame
+use_suggs_how_plot <- data.frame(colB = unlist(strsplit(as.character(online$use_suggs_how), ", ")))
+use_suggs_how_plot <- data.frame(table(use_suggs_how_plot$colB))
+use_suggs_how_plot <- subset(use_suggs_how_plot, Freq != 1) # remove single custom responses
+
+my_palette <- wes_palette("Darjeeling2", 8)
+
+# PLOT stacked bar chart
+ggplot(use_suggs_how_plot, aes(x = reorder(Var1, Freq), y = Freq)) +
+  geom_bar(width = 0.4, stat = "identity", aes(fill = Var1)) +
+  scale_fill_manual(values=c('#00077a', '#ff924c', "#ea5545", "#f46a9b", '#b30069', "#ede15b", "#1687ef", '#761cc1')) +
+  labs(x = "Responses", y = "Count", title = "How have you used AI text suggestions?", subtitle = "Online survey (16 participants)") +
+  theme_classic() +
+  theme(legend.position = "None",
+        axis.text.y = element_text(size = 11),
+        plot.title = element_text(hjust = 0.5, face = 'bold', size = 13),
+        plot.subtitle = element_text(hjust = 0.5)) +
+  coord_flip() +
+  geom_text(aes(label = Freq),
+            position = position_stack(vjust = 0.5),
+            color = "white",
+            fontface = "bold")
+
+# colors tests
+#c("#ea5545", "#f46a9b", "#ef9b20", "#ede15b", '#00077a', "#87bc45", "#27aeef", "#b33dc6")
+#c('#ff924c','#f66e4e','#e74956','#d1205f','#b30069','#8e0072','#5e0079','#00077a')
+```
+# When/how are AI suggestions helpful? - study AND survey
+```{r}
+# STUDY
+useful_when_study <- data.frame(table(df$When.was.the.AI.tool.most.helpful.))
+# merge custom response into the standard one
+useful_when_study <- subset(useful_when_study, Var1 != "beginning and somewhat in the middle")
+useful_when_study$Freq[useful_when_study$Var1 == "At the beginning of writing the story"] <- 2 # + 1
+useful_part_study <- data.frame(table(df$What.part.of.the.AI.text.suggestions.was.most.helpful))
+
+# part study (could only pick 1)
+ggplot(useful_part_study, aes(x = reorder(Var1, Freq), y = Freq)) +
+  geom_bar(width = 0.3, stat = "identity", aes(fill = Var1)) +
+  scale_fill_manual(values=c('#00077a', '#b30069', "#ede15b", '#761cc1')) +
+  labs(x = "Responses", y = "Count", title = "What part of the AI text suggestions was most helpful?", subtitle = "Study (7 participants)") +
+  theme_classic() +
+  theme(legend.position = "None",
+        axis.text.y = element_text(size = 12),
+        plot.title = element_text(hjust = 0.5, face = 'bold', size = 13),
+        plot.subtitle = element_text(hjust = 0.5)) +
+  coord_flip() +
+  geom_text(aes(label = Freq),
+            position = position_stack(vjust = 0.5),
+            color = "white",
+            fontface = "bold")
+
+# when study (could only pick 1)
+p_when_stu <- ggplot(useful_when_study, aes(x = reorder(Var1, Freq), y = Freq)) +
+  geom_bar(width = 0.3, stat = "identity", aes(fill = Var1)) +
+  scale_fill_manual(values=c('#65e0bd', "#0686bd", '#bdaf59', '#013f59')) + # blue yellow purple pink
+  labs(x = "Responses", y = "Count", title = "When were the AI text suggestions most helpful?", subtitle = "Study (7 participants)") +
+  theme_classic() +
+  theme(legend.position = "None",
+        axis.text.y = element_text(size = 12),
+        plot.title = element_text(hjust = 0.5, face = 'bold', size = 13),
+        plot.subtitle = element_text(hjust = 0.5)) +
+  coord_flip() +
+  geom_text(aes(label = Freq),
+            position = position_stack(vjust = 0.5),
+            color = "white",
+            fontface = "bold")
+
+# SURVEY
+useful_when_survey <- data.frame(table(online$When.is.AI.usually.most.helpful.to.you.))
+# merge custom respons into the standard one
+useful_when_survey <- subset(useful_when_survey, Var1 != "Throughout - but it is used in different ways at different stages of writing.")
+useful_when_survey$Freq[useful_when_survey$Var1 == "Throughout all parts of writing a text"] <- 12 # + 1
+useful_part_survey <- data.frame(table(online$What.part.of.the.AI.text.suggestions.are.usually.most.helpful.))
+
+# part survey
+ggplot(useful_part_survey, aes(x = reorder(Var1, Freq), y = Freq)) +
+  geom_bar(width = 0.3, stat = "identity", aes(fill = Var1)) +
+  scale_fill_manual(values=c('#00077a', '#b30069', "#ede15b", '#761cc1', 'blue', 'green', 'grey', 'orange', 'lightpink', 'black')) +
+  labs(x = "Responses", y = "Count", title = "What part of AI text suggestions are usually most helpful?", subtitle = "Survey (16 participants)") +
+  theme_classic() +
+  theme(legend.position = "None",
+        axis.text.y = element_text(size = 12),
+        plot.title = element_text(hjust = 0.5, face = 'bold', size = 13),
+        plot.subtitle = element_text(hjust = 0.5)) +
+  coord_flip() +
+  geom_text(aes(label = Freq),
+            position = position_stack(vjust = 0.5),
+            color = "white",
+            fontface = "bold")
+# ^^ banan - fix colors AND responses!?
+
+# when survey
+p_when_sur <- ggplot(useful_when_survey, aes(x = reorder(Var1, Freq), y = Freq)) +
+  geom_bar(width = 0.3, stat = "identity", aes(fill = Var1)) +
+  scale_fill_manual(values=c('#65e0bd','#013f59', "#0686bd", '#bdaf59')) +
+  labs(x = "Responses", y = "Count", title = "When are AI text suggestions usually most helpful?", subtitle = "Survey (16 participants)") +
+  theme_classic() +
+  theme(legend.position = "None",
+        axis.text.y = element_text(size = 12),
+        plot.title = element_text(hjust = 0.5, face = 'bold', size = 13),
+        plot.subtitle = element_text(hjust = 0.5)) +
+  scale_y_continuous(breaks=seq(0,12,1)) +
+  coord_flip() +
+  geom_text(aes(label = Freq),
+            position = position_stack(vjust = 0.5),
+            color = "white",
+            fontface = "bold")
+
+
+p_when_sur + p_when_stu # patchwork
+```
+# Sense of ownership - survey & study
+```{r}
+# OWNERSHIP - if you had to write a text with AI, how would you feel? (separate study and online survey)
+# (this is now just mentioned in-text instead? at least for study! maybe make little plot?)
+#How do you feel about texts that you have written using AI tools?
+ownership_survey <- data.frame(table(online$How.do.you.feel.about.texts.that.you.have.written.using.AI.tools.))
+ownership_survey <- subset(ownership_survey, Var1 != "It's awesome. I feel like its the same as having Writing Aids like ProWritingAid.com,  Editors, Ghost Writers collaborating on the project that you don't have to give credit to.")
+ownership_survey$Freq[ownership_survey$Var1 == "The final text is co-written by myself and the AI"] <- 3 # + 1
+
+
+# SURVEY SENSE OF OWNERSHIP
+ggplot(ownership_survey, aes(x = reorder(Var1, Freq), y = Freq)) +
+  geom_bar(width = 0.3, stat = "identity", aes(fill = Var1)) +
+  scale_fill_manual(values=c("#87bc45", "#ef9b20", "#ea5545")) +
+  labs(x = "Responses", y = "Count", title = "How do you feel about texts that you have written using AI tools?", subtitle = "Survey (16 participants)") +
+  theme_classic() +
+  theme(legend.position = "None",
+        axis.text.y = element_text(size = 11),
+        plot.title = element_text(hjust = 0.5, face = 'bold', size = 13),
+        plot.subtitle = element_text(hjust = 0.5)) +
+  coord_flip() +
+  geom_text(aes(label = Freq),
+            position = position_stack(vjust = 0.5),
+            color = "white",
+            fontface = "bold")
+
+
+# STUDY SENSE OF OWNERSHIP
+#pre
+ownership_study_pre <- data.frame(table(df$If.you.had.to.write.a.text.together.with.an.AI.Language.Model..how.would.you.feel.about.the.final.product.), stringsAsFactors = FALSE)
+#post
+ownership_study <- data.frame(table(df$How.do.you.feel.about.the.short.story.you.just.wrote.), stringsAsFactors = FALSE)
+ownership_study$Var1 <- as.character(ownership_study$Var1)
+ownership_study$Var1[ownership_study$Var1 == "I feel it is authored 70% by me and 30% by someone or something else"] <- "The final text is co-written by myself and the AI"
+ownership_study$Var1 <- as.factor(ownership_study$Var1)
+
+
+
+# ONE BIG PLOT...
+df$If.you.had.to.write.a.text.together.with.an.AI.Language.Model..how.would.you.feel.about.the.final.product.
+df$How.do.you.feel.about.the.short.story.you.just.wrote.
+
+
+own_plot <- bind_rows(ownership_study, ownership_study_pre, ownership_survey)
+
+
+
+###
+testgrr <- bind_rows(ownership_study, ownership_study_pre, ownership_survey)
+testgrr$source <- c('Study (after)', 'Study (after)', 'Study (before)', 'Study (before)', 'Study (before)', 'Online survey', 'Online survey', 'Online survey')
+
+# add the 0's so bars all have same width
+testgrr <- rbind(testgrr, c("It doesn't matter to me", 0, "Study (before)"))
+testgrr <- rbind(testgrr, c("It doesn't matter to me", 0, "Study (after)"))
+testgrr <- rbind(testgrr, c("It depends what kinds of functions I used/how the model helped me", 0, "Online survey"))
+testgrr <- rbind(testgrr, c("It depends what kinds of functions I used/how the model helped me", 0, "Study (after)"))
+
+testgrr$Freq <- as.numeric(testgrr$Freq)
+
+# please work banan
+ggplot(testgrr, aes(fill=source, y=Freq, x=str_wrap(Var1, width = 15))) + 
+  geom_bar(width = 0.6, position="dodge", stat="identity") +
+  scale_fill_manual(values = c('orange', 'darkblue', '#367bc3')) +
+  labs(title = 'Different writing phases & AI', subtitle = 'Online survey (16 participants)', x = '', y = 'Response count') +
+  theme_classic() +
+   geom_text(aes(label = Freq),
+            position=position_stack(vjust = -0.5),
+            color = "red",
+            fontface = "bold") +
+  theme(
+      plot.title = element_text(hjust = 0.5, face = 'bold', size = 13),
+      plot.subtitle = element_text(hjust = 0.5),
+      legend.title = element_blank(),
+      legend.text = element_text(size = 10),
+      axis.text.x = element_text(size=12),
+      panel.grid.major.y = element_line(color='lightgrey')
+    ) +
+  scale_y_continuous(limits=c(0,16), breaks = c(0,1,2,3,4,5,6,7,8,9,10,11))
 
 
 ```
 
-# Add columns (descriptive)
+# Potential extra survey plots (if space) - participant backgrounds
 ```{r}
-#texts: nr_words etc... sentiment?
+# how often do you currently do creative writing? (separate study and online survey)
+
+# I enjoy writing/reading/whatever (separate study and online survey)
+
+# experience/knowledge with AI LLMs (separate study and online survey)
+
+# how often do you currently use LLMs (separate study and online survey)
+
 ```
 
-
-# Divergent Semantic Integration (DSI)
+# TABLE
 ```{r}
+# types of integrative leaps
+library(formattable)
+# Table content
+d <- data.frame(
+  leap_type = c("Direct", "Indirect", "Exploratory", "Confirmatory", "Convergent", "Divergent"),
+  nr_occurences = c("25", "1", "8", "18", "17", "9")
+)
 
+names(d) <- c("Leap type", "Number of occurrences")
+
+# Create and format table
+font = "Arial"
+formattable(d, align = "c", list(
+  `Type of integrative leap` = formatter("span",
+    `Number of occurences` = x ~ style(text.align = "center", font.family = font))
+))
 ```
-
