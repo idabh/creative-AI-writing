@@ -19,6 +19,12 @@ This repository contains the code for my research project on using AI in Creativ
 ABSTRACT
 
 
+### Main research findings
+<img src="figure_AI_uses.jpg" alt="Uses for AI in the creative writing process" height = 500>
+<img src="figure_themes.jpg" alt="Thematic analysis: How does AI affect the writing process?" height = 500>
+
+<img src="figure_comparison.png" alt="Study participants' comparisons of the AI and non-AI writing sessions" height = 400>
+
 
 ### Acknowledgments
 * Header illustration created with Bing Image Creator
