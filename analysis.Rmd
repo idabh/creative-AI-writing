@@ -1,5 +1,5 @@
 ---
-title: "Master thesis - Analysis & Visualisations - Ida Bang Hansen, Spring 2023"
+title: "Master's Thesis - Analysis & Visualisations - Ida Bang Hansen, Spring 2023"
 output: html_document
 date: "2023-04-03"
 ---
@@ -1497,7 +1497,6 @@ ggplot(useful_part_survey, aes(x = reorder(Var1, Freq), y = Freq)) +
             position = position_stack(vjust = 0.5),
             color = "white",
             fontface = "bold")
-# ^^ banan - fix colors AND responses!?
 
 # when survey
 p_when_sur <- ggplot(useful_when_survey, aes(x = reorder(Var1, Freq), y = Freq)) +
@@ -1578,7 +1577,7 @@ testgrr <- rbind(testgrr, c("It depends what kinds of functions I used/how the m
 
 testgrr$Freq <- as.numeric(testgrr$Freq)
 
-# please work banan
+# plot
 ggplot(testgrr, aes(fill=source, y=Freq, x=str_wrap(Var1, width = 15))) + 
   geom_bar(width = 0.6, position="dodge", stat="identity") +
   scale_fill_manual(values = c('orange', 'darkblue', '#367bc3')) +
