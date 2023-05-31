@@ -363,25 +363,26 @@ df$cog_load_raw_TLX_score_own <- rowMeans(df[,c("cog_discouraged_annoyed_own_num
 
 # PLOT COG LOAD DATA!
 cog_plot <- select(df, starts_with('cog_load_raw_TLX'))
-#cog_plot$ID <- df$id
+cog_plot <- cog_plot[,1:2]
 cog_plot_long <- gather(cog_plot, key = "variable", value = "value")
 cog_plot_long$ID <- as.factor(rep(df$id,2)) # add participant IDs
-cog_plot_long$variable <- as.factor(ifelse(cog_plot_long$variable == 'cog_load_raw_TLX_score_ai',
-                                 'AI writing session',
-                                 'Non-AI writing session'))
+cog_plot_long$variable <- as.factor(ifelse(cog_plot_long$variable == 'cog_load_raw_TLX_score_own',
+                                 'Non-AI writing session',
+                                 'AI writing session'))
 
 # plot
-ggplot(cog_plot_long,aes(x = variable, y = value, fill = variable)) +
+ggplot(cog_plot_long,aes(x = factor(variable, levels = c('Non-AI writing session', 'AI writing session')), y = value, fill = variable)) +
   geom_boxplot(alpha = 0.5) +
   scale_fill_manual(values = c('#325586ff', '#0d9857ff')) +
   geom_point(aes(color=ID),size = 2.7) +
   #geom_text(aes(label=id, color = id), hjust=1.2, size = 3) +
-  geom_line(aes(group=ID, color=ID), size = 1) +
+  geom_line(aes(group=ID, color=ID), size = 1.2) +
   scale_color_manual(values = participant_colors) +
   scale_y_continuous(limits=c(1,6),breaks=seq(1,6,1)) +
-  labs(title = "Raw Unweighted Cognitive Load Average", x = "", y = "Cognitive load (average of 4 TLX items, Very low - Very high)") +
+  labs(title = "Difference in cognitive load between writing sessions", x = "", y = "Raw unweighted cognitive load (average of 4 TLX items, Very low - Very high)") +
   theme_classic() +
-  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(hjust = 0.5, face = 'bold', size = 13)
+        ) +
   guides(fill=FALSE) # remove legend for 'variable' boxplot colors, only keep legend for ID colors
 
 
@@ -477,7 +478,7 @@ suggestions_plot <- suggestions_plot %>%
                 cal_includes_action = 'Do suggestions include action?',
                 cal_includes_description = 'Do suggestions include description?',
                 cal_intro_new_elements = 'Do suggestions introduce new elements?',
-                cal_matches_tense = 'Are suggestions grammatical?'
+                cal_matches_tense = 'Are suggestions grammatically correct?'
                 ))
 
 # create nr_answers variable for labels
@@ -1441,6 +1442,13 @@ useful_when_study <- data.frame(table(df$When.was.the.AI.tool.most.helpful.))
 # merge custom response into the standard one
 useful_when_study <- subset(useful_when_study, Var1 != "beginning and somewhat in the middle")
 useful_when_study$Freq[useful_when_study$Var1 == "At the beginning of writing the story"] <- 2 # + 1
+
+#add option to include it even if it had 0 responses
+#useful_when_study$Var1 <- as.character(useful_when_study$Var1)
+#useful_when_study <- rbind(useful_when_study, c("At the end of writing the story", 0))
+#useful_when_study$Var1 <- as.factor(useful_when_study$Var1)
+
+
 useful_part_study <- data.frame(table(df$What.part.of.the.AI.text.suggestions.was.most.helpful))
 
 # part study (could only pick 1)
@@ -1462,7 +1470,7 @@ ggplot(useful_part_study, aes(x = reorder(Var1, Freq), y = Freq)) +
 # when study (could only pick 1)
 p_when_stu <- ggplot(useful_when_study, aes(x = reorder(Var1, Freq), y = Freq)) +
   geom_bar(width = 0.3, stat = "identity", aes(fill = Var1)) +
-  scale_fill_manual(values=c('#65e0bd', "#0686bd", '#bdaf59', '#013f59')) + # blue yellow purple pink
+  scale_fill_manual(values=c('#65e0bd', "#0686bd", '#bdaf59', '#013f59')) +
   labs(x = "Responses", y = "Count", title = "When were the AI text suggestions most helpful?", subtitle = "Study (7 participants)") +
   theme_classic() +
   theme(legend.position = "None",
